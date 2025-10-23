@@ -3,6 +3,11 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from ..db import Base
+from .payment_intent import PaymentIntent
+from .refund import Refund
+from .payout import Payout
+from .product import Product
+from .product_variant import ProductVariant
 
 class Order(Base):
     __tablename__ = "orders"

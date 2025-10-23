@@ -14,6 +14,7 @@ class UserCreate(UserBase):
     # Por simplicidad inicial, aceptamos password_hash directo.
     # Mas adelante cambiaremos a hashing seguro / Auth0.
     password_hash: Optional[str] = None
+    auth0_user_id: Optional[str] = None
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
@@ -22,6 +23,7 @@ class UserUpdate(BaseModel):
     is_verified: Optional[bool] = None
     can_sell: Optional[bool] = None
     password_hash: Optional[str] = None
+    auth0_user_id: Optional[str] = None
 
 class UserOut(UserBase):
     id: int

@@ -16,6 +16,7 @@ class User(Base):
     phone = Column(Text)
     is_verified = Column(Boolean, nullable=False, server_default="false")
     can_sell = Column(Boolean, nullable=False, server_default="false")
+    auth0_user_id = Column(Text, nullable=True, unique=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     deleted_at = Column(DateTime(timezone=True))

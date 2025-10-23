@@ -7,6 +7,10 @@ from ...db import get_db
 from ...repositories.store_repository import StoreRepository
 from ...schemas.store import StoreCreate, StoreOut, StoreUpdate
 
+# Constantes
+STORE_NOT_FOUND_ERROR = "Tienda no encontrada"
+SLUG_ALREADY_IN_USE_ERROR = "El slug ya está en uso"
+
 router = APIRouter(prefix="/stores", tags=["stores"])
 
 @router.post("", response_model=StoreOut, status_code=status.HTTP_201_CREATED)
@@ -23,7 +27,7 @@ def create_store(
         if existing_store:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="El slug ya está en uso"
+                detail=SLUG_ALREADY_IN_USE_ERROR
             )
         
         store = store_repo.create_store(store_data)
@@ -48,7 +52,7 @@ def get_store(
     if not store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tienda no encontrada"
+            detail=STORE_NOT_FOUND_ERROR
         )
     
     return store
@@ -65,7 +69,7 @@ def get_store_by_external_id(
     if not store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tienda no encontrada"
+            detail=STORE_NOT_FOUND_ERROR
         )
     
     return store
@@ -82,7 +86,7 @@ def get_store_by_slug(
     if not store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tienda no encontrada"
+            detail=STORE_NOT_FOUND_ERROR
         )
     
     return store
@@ -136,7 +140,7 @@ def update_store(
         if existing_store and existing_store.id != store_id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="El slug ya está en uso"
+                detail=SLUG_ALREADY_IN_USE_ERROR
             )
     
     store = store_repo.update_store(store_id, store_data)
@@ -144,7 +148,7 @@ def update_store(
     if not store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tienda no encontrada"
+            detail=STORE_NOT_FOUND_ERROR
         )
     
     return store
@@ -161,5 +165,5 @@ def delete_store(
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tienda no encontrada"
+            detail=STORE_NOT_FOUND_ERROR
         )

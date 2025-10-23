@@ -5,6 +5,9 @@ from typing import List, Optional
 from uuid import UUID
 
 from ...db import get_db
+
+# Constantes
+ORDER_NOT_FOUND_ERROR = "Orden no encontrada"
 from ...repositories.order_repository import OrderRepository
 from ...models.order import OrderMessage
 from ...schemas.order import (
@@ -42,7 +45,7 @@ def get_order(
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Orden no encontrada"
+            detail=ORDER_NOT_FOUND_ERROR
         )
     
     return order
@@ -59,7 +62,7 @@ def get_order_by_external_id(
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Orden no encontrada"
+            detail=ORDER_NOT_FOUND_ERROR
         )
     
     return order
@@ -109,7 +112,7 @@ def update_order(
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Orden no encontrada"
+            detail=ORDER_NOT_FOUND_ERROR
         )
     
     return order
@@ -126,7 +129,7 @@ def delete_order(
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Orden no encontrada"
+            detail=ORDER_NOT_FOUND_ERROR
         )
 
 # Endpoints para mensajes de órdenes
@@ -144,7 +147,7 @@ def create_order_message(
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Orden no encontrada"
+            detail=ORDER_NOT_FOUND_ERROR
         )
     
     message_data.order_id = order_id

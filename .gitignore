@@ -1,2 +1,11 @@
 /.env
 /venv
+/.sonar
+__pycache__/
+*.py[cod]
+*$py.class
+
+# SonarQube
+.sonarqube/
+.scannerwork/
+sonar-project.properties

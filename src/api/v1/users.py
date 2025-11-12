@@ -13,10 +13,6 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def create_user(payload: UserCreate, db: Session = Depends(get_db)):
     """Crear un nuevo usuario"""
-    existing = db.query(User).filter(User.email == payload.email).first()
-    if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email ya registrado")
-
     # Validar que los campos requeridos estén presentes
     required_fields = [payload.full_name, payload.phone]
     if any(f is None or (isinstance(f, str) and not f.strip()) for f in required_fields):
@@ -98,12 +94,6 @@ def update_user(
     user = db.query(User).filter(User.id == user_id).filter(User.deleted_at.is_(None)).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
-    
-    # Verificar que el email no esté en uso por otro usuario
-    if user_data.email and user_data.email != user.email:
-        existing = db.query(User).filter(User.email == user_data.email).filter(User.id != user_id).first()
-        if existing:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email ya registrado")
     
     update_data = user_data.dict(exclude_unset=True)
     for field, value in update_data.items():

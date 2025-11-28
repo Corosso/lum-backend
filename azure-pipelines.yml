@@ -1,0 +1,155 @@
+# Pipeline CI/CD para FastAPI Backend - Lum
+# Se ejecuta automáticamente en cada push a develop o main
+
+name: $(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  branches:
+    include:
+      - develop
+      - main
+  paths:
+    exclude:
+      - README.md
+      - docs/*
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  pythonVersion: '3.11'
+  azureSubscription: 'azure-lum-backend'  # Nombre de tu Service Connection
+  webAppName: 'lum-backend'  # Nombre de tu App Service
+  resourceGroup: 'rg-lum-backend'
+
+stages:
+# ============================================
+# STAGE 1: BUILD
+# ============================================
+- stage: Build
+  displayName: '🔨 Build'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build Python Application'
+    steps:
+    
+    # 1. Checkout del código
+    - checkout: self
+      displayName: '📥 Checkout code'
+    
+    # 2. Configurar Python
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(pythonVersion)'
+        addToPath: true
+      displayName: '🐍 Setup Python $(pythonVersion)'
+    
+    # 3. Mostrar información del sistema
+    - script: |
+        echo "Python version:"
+        python --version
+        echo "Pip version:"
+        pip --version
+        echo "Working directory:"
+        pwd
+        ls -la
+      displayName: '📊 Display system info'
+    
+    # 4. Instalar dependencias
+    - script: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install -r requirements.txt
+      displayName: '📦 Install dependencies'
+    
+
+    
+    # 5. Publicar artefactos
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+      displayName: '🚀 Publish build artifacts'
+
+# ============================================
+# STAGE 2: DEPLOY A AZURE
+# ============================================
+- stage: Deploy
+  displayName: '🚀 Deploy to Azure'
+  dependsOn: Build
+  condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), eq(variables['Build.SourceBranch'], 'refs/heads/main')))
+  jobs:
+  - deployment: DeployWeb
+    displayName: 'Deploy to App Service'
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          
+          # 1. Descargar artefactos del Build
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'drop'
+              downloadPath: '$(System.ArtifactsDirectory)'
+            displayName: '📥 Download build artifacts'
+          
+          # 2. Extraer información del artefacto
+          - script: |
+              echo "Artifacts directory:"
+              ls -la $(System.ArtifactsDirectory)/drop/
+            displayName: '📋 List artifacts'
+          
+          # 3. Desplegar a Azure App Service
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'webAppLinux'
+              appName: '$(webAppName)'
+              package: '$(System.ArtifactsDirectory)/drop/$(Build.BuildId).zip'
+              runtimeStack: 'PYTHON|3.11'
+              startUpCommand: 'gunicorn -w 4 -k uvicorn.workers.UvicornWorker src.main:app --bind 0.0.0.0:8000 --timeout 120'
+            displayName: '🚀 Deploy to Azure App Service'
+          
+          # 4. Esperar a que el servicio inicie
+          - script: |
+              echo "Waiting for service to start..."
+              sleep 30
+            displayName: '⏳ Wait for service startup'
+          
+          # 5. Health Check
+          - script: |
+              echo "Performing health check..."
+              response=$(curl -s -o /dev/null -w "%{http_code}" https://$(webAppName).azurewebsites.net/health)
+              if [ $response -eq 200 ]; then
+                echo "✅ Health check passed (HTTP $response)"
+                exit 0
+              else
+                echo "❌ Health check failed (HTTP $response)"
+                echo "Checking logs..."
+                exit 1
+              fi
+            displayName: '🏥 Health check'
+            continueOnError: true
+          
+          # 6. Verificar endpoint de docs
+          - script: |
+              echo "Checking API documentation..."
+              curl -f https://$(webAppName).azurewebsites.net/docs || echo "Docs endpoint not available"
+            displayName: '📚 Verify docs endpoint'
+            continueOnError: true
+          
+          # 7. Resumen del despliegue
+          - script: |
+              echo "============================================"
+              echo "🎉 Deployment Summary"
+              echo "============================================"
+              echo "App Service: $(webAppName)"
+              echo "URL: https://$(webAppName).azurewebsites.net"
+              echo "Build: $(Build.BuildNumber)"
+              echo "Branch: $(Build.SourceBranchName)"
+              echo "Commit: $(Build.SourceVersion)"
+              echo "============================================"
+            displayName: '📊 Deployment summary'
